@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WAVE LAB v1.1</title>
+<title>WAVE LAB v1.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -128,6 +128,19 @@ a{color:var(--teal);text-decoration:none}
 .proj-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .proj-name-badge{background:var(--teal);color:#fff;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700}
 
+/* Y-range settings */
+.yrange-section{margin-top:14px}
+.yrange-toggle{font-size:13px;font-weight:700;cursor:pointer;padding:10px 0;display:flex;align-items:center;gap:6px;color:var(--text2)}
+.yrange-toggle::before{content:'';display:inline-block;width:0;height:0;border-left:6px solid var(--text2);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .2s}
+.yrange-toggle.open::before{transform:rotate(90deg)}
+.yrange-body{display:none;padding:10px 0}
+.yrange-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.yrange-row label{font-size:12px;font-weight:700;color:var(--text2);min-width:50px}
+.yrange-row input[type=number]{width:80px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;background:#fff;color:var(--text);text-align:center}
+.yrange-row input[type=number]:focus{outline:none;border-color:var(--teal)}
+.yrange-default-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2);margin-left:auto}
+.yrange-default-btn:hover{border-color:var(--teal);color:var(--teal)}
+
 .footer{text-align:center;padding:16px;font-size:11px;color:var(--text2)}
 
 @media(max-width:768px){
@@ -147,7 +160,7 @@ a{color:var(--teal);text-decoration:none}
   <div class="logo">WL</div>
   <div class="header-title">
     <h1>WAVE LAB</h1>
-    <div class="sub">SENSOR COMPARE LAB v1.1</div>
+    <div class="sub">SENSOR COMPARE LAB v1.2</div>
   </div>
   <div class="ble-area">
     <button class="ble-btn" id="bleBtn" onclick="toggleBLE()">BLE接続</button>
@@ -255,6 +268,18 @@ a{color:var(--teal);text-decoration:none}
       </div>
       <div class="range-labels"><span id="rangeLabelL">0%</span><span id="rangeLabelR">100%</span></div>
     </div>
+    <div class="yrange-section">
+      <div class="yrange-toggle" id="yrangeToggle" onclick="toggleYRange()">Y軸レンジ設定</div>
+      <div class="yrange-body" id="yrangeBody">
+        <div class="yrange-row">
+          <label>Y min</label>
+          <input type="number" id="yrangeMin" step="any" oninput="onYRangeInput()">
+          <label>Y max</label>
+          <input type="number" id="yrangeMax" step="any" oninput="onYRangeInput()">
+          <button class="yrange-default-btn" onclick="resetYRangeAxis()">デフォルトに戻す</button>
+        </div>
+      </div>
+    </div>
     <div class="stats-section">
       <div class="stats-toggle" id="statsToggle" onclick="toggleStats()">統計情報</div>
       <div id="statsBody" style="display:none"></div>
@@ -263,7 +288,7 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
-<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.1</div>
+<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.2</div>
 
 <script>
 /* ===== Constants ===== */
@@ -274,6 +299,14 @@ const TAKE_COLORS = ['#3AABA8','#E88A0A','#2E8EC4','#C94040','#7B5EA7'];
 const MAX_LIVE = 200;
 const MAX_COMP_PTS = 1000;
 const LS_KEY = 'wave-lab-projects';
+const LS_YRANGE = 'wave-lab-y-range';
+const Y_RANGE_DEFAULTS = {
+  abs:  {min: 0,   max: 8},
+  ax:   {min: -4,  max: 4},
+  ay:   {min: -4,  max: 4},
+  az:   {min: -4,  max: 4},
+  gyro: {min: 0,   max: 2000}
+};
 
 /* ===== State ===== */
 let bleDevice = null, bleChar = null, bleConnected = false;
@@ -289,6 +322,42 @@ let compAxis = 'abs';
 let recStart = 0, timerInterval = null;
 let partialLine = '';
 let rangeL = 0, rangeR = 100; // % range for compare
+
+/* ===== Y-Range ===== */
+function deepCopyDefaults(){ const o={}; for(const k in Y_RANGE_DEFAULTS) o[k]={...Y_RANGE_DEFAULTS[k]}; return o; }
+function loadYRange(){
+  try{ const r=localStorage.getItem(LS_YRANGE); if(r){const p=JSON.parse(r); for(const k in Y_RANGE_DEFAULTS){if(!p[k])p[k]={...Y_RANGE_DEFAULTS[k]};} return p;} }catch(e){}
+  return deepCopyDefaults();
+}
+function saveYRange(){ try{localStorage.setItem(LS_YRANGE,JSON.stringify(yRange))}catch(e){} }
+let yRange = loadYRange();
+function getYR(axis){ return yRange[axis] || Y_RANGE_DEFAULTS[axis] || {min:-4,max:4}; }
+function syncYRangeUI(){
+  const axis = compAxis;
+  const r = getYR(axis);
+  document.getElementById('yrangeMin').value = r.min;
+  document.getElementById('yrangeMax').value = r.max;
+}
+function onYRangeInput(){
+  const mn = parseFloat(document.getElementById('yrangeMin').value);
+  const mx = parseFloat(document.getElementById('yrangeMax').value);
+  if(isNaN(mn)||isNaN(mx)||mn>=mx) return;
+  yRange[compAxis] = {min:mn, max:mx};
+  saveYRange();
+  renderCompare();
+}
+function resetYRangeAxis(){
+  yRange[compAxis] = {...Y_RANGE_DEFAULTS[compAxis]};
+  saveYRange();
+  syncYRangeUI();
+  renderCompare();
+}
+function toggleYRange(){
+  const body=document.getElementById('yrangeBody');const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  document.getElementById('yrangeToggle').classList.toggle('open',!open);
+  if(!open) syncYRangeUI();
+}
 
 /* ===== Persistence ===== */
 function saveProjects(){
@@ -446,12 +515,13 @@ function startMeas(){
 let liveChart=null, liveLoopId=null;
 function initLiveChart(color){
   if(liveChart){liveChart.destroy();liveChart=null}
+  const yr=getYR(liveAxis);
   const ctx=document.getElementById('liveChart').getContext('2d');
   liveChart=new Chart(ctx,{
     type:'line',
     data:{labels:[],datasets:[{data:[],borderColor:color,borderWidth:1.5,pointRadius:0,tension:.2}]},
     options:{animation:false,responsive:true,maintainAspectRatio:false,
-      scales:{x:{display:false},y:{beginAtZero:false,ticks:{font:{size:10}}}},
+      scales:{x:{display:false},y:{min:yr.min,max:yr.max,ticks:{font:{size:10}}}},
       plugins:{legend:{display:false}}}
   });
 }
@@ -492,6 +562,7 @@ document.getElementById('liveAxisBtns').addEventListener('click',e=>{
   document.querySelectorAll('#liveAxisBtns .axis-btn').forEach(b=>b.classList.remove('active'));
   e.target.classList.add('active');
   liveAxis=e.target.dataset.ax;
+  if(liveChart){const yr=getYR(liveAxis);liveChart.options.scales.y.min=yr.min;liveChart.options.scales.y.max=yr.max;liveChart.update('none')}
 });
 
 /* ===== Recording ===== */
@@ -581,6 +652,7 @@ document.getElementById('compAxisBtns').addEventListener('click',e=>{
   document.querySelectorAll('#compAxisBtns .axis-btn').forEach(b=>b.classList.remove('active'));
   e.target.classList.add('active');
   compAxis=e.target.dataset.ax;
+  syncYRangeUI();
   renderCompare();
 });
 
@@ -618,9 +690,10 @@ function renderCompare(){
       return{label:t.name,data:ds.map((s,i)=>({x:(i/(ds.length-1||1))*100,y:getAxisVal(s,compAxis)})),
         borderColor:t.color,borderWidth:1.5,pointRadius:0,tension:.2,fill:false};
     });
+    const yr=getYR(compAxis);
     const ch=new Chart(canvas.getContext('2d'),{type:'line',data:{datasets},
       options:{animation:false,responsive:true,maintainAspectRatio:false,
-        scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:11}},ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}},
+        scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:11}},ticks:{font:{size:10}}},y:{min:yr.min,max:yr.max,ticks:{font:{size:10}}}},
         plugins:{legend:{display:false}}}
     });
     compCharts.push(ch);
@@ -636,11 +709,12 @@ function renderCompare(){
 
       const sliced=sliceByRange(t.fullLog);
       const ds=downsample(sliced,MAX_COMP_PTS);
+      const yr=getYR(compAxis);
       const ch=new Chart(canvas.getContext('2d'),{type:'line',
         data:{datasets:[{data:ds.map((s,i)=>({x:(i/(ds.length-1||1))*100,y:getAxisVal(s,compAxis)})),
           borderColor:t.color,borderWidth:1.5,pointRadius:0,tension:.2,fill:false}]},
         options:{animation:false,responsive:true,maintainAspectRatio:false,
-          scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:10}},ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}},
+          scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:10}},ticks:{font:{size:9}}},y:{min:yr.min,max:yr.max,ticks:{font:{size:9}}}},
           plugins:{legend:{display:false}}}
       });
       compCharts.push(ch);
