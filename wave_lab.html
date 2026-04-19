@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WAVE LAB v1.7</title>
+<title>WAVE LAB v1.8</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -92,7 +92,7 @@ a{color:var(--teal);text-decoration:none}
 .compare-chart-wrap{margin-bottom:14px}
 .compare-chart-wrap .chart-label{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px}
 .comp-overlay-canvas{width:100%!important;height:500px!important}
-.comp-stack-canvas{width:100%!important;height:280px!important}
+.comp-stack-canvas{width:100%!important;height:180px!important}
 
 .stats-section{margin-top:14px}
 .stats-toggle{font-size:13px;font-weight:700;cursor:pointer;padding:10px 0;display:flex;align-items:center;gap:6px;color:var(--text2)}
@@ -163,7 +163,7 @@ a{color:var(--teal);text-decoration:none}
   .main{padding:10px;max-width:100%!important}
   .chart-wrap canvas{height:200px!important}
   .comp-overlay-canvas{height:250px!important}
-  .comp-stack-canvas{height:160px!important}
+  .comp-stack-canvas{height:140px!important}
   .live-vals{grid-template-columns:repeat(4,1fr);gap:4px}
   .lv .val{font-size:14px}
   .lv .label{font-size:9px}
@@ -177,7 +177,7 @@ a{color:var(--teal);text-decoration:none}
   <div class="logo">WL</div>
   <div class="header-title">
     <h1>WAVE LAB</h1>
-    <div class="sub">SENSOR COMPARE LAB v1.7</div>
+    <div class="sub">SENSOR COMPARE LAB v1.8</div>
   </div>
   <div class="ble-area">
     <button class="ble-btn" id="bleBtn" onclick="toggleBLE()">BLE接続</button>
@@ -341,7 +341,7 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
-<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.7</div>
+<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.8</div>
 
 <script>
 /* ===== Constants ===== */
@@ -974,7 +974,12 @@ function renderCompare(){
   const container=document.getElementById('compCharts');container.innerHTML='';
 
   const leg=document.getElementById('compLegend');
-  leg.innerHTML=takes.map(t=>`<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div>${esc(t.name)}</div>`).join('');
+  if(compMode==='overlay'){
+    leg.style.display='';
+    leg.innerHTML=takes.map(t=>`<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div>${esc(t.name)}</div>`).join('');
+  } else {
+    leg.style.display='none';
+  }
 
   if(compMode==='overlay'){
     const canvas=document.createElement('canvas');
@@ -1024,24 +1029,28 @@ function renderCompare(){
     compCharts.push(ch);
     setupCompDrag();
   } else {
+    const stackDragWraps=[];
     for(const t of takes){
       const wrap=document.createElement('div');wrap.className='compare-chart-wrap';
       const label=document.createElement('div');label.className='chart-label';
-      label.innerHTML=`<div class="legend-dot" style="background:${t.color}"></div> ${esc(t.name)} <span style="color:var(--text2);font-weight:400;font-size:12px">${esc(t.location||'')}</span>`;
+      const locStr=t.location?(' / '+esc(t.location)):'';
+      label.innerHTML=`<div class="legend-dot" style="background:${t.color}"></div> ${esc(t.name)}${locStr}`;
       wrap.appendChild(label);
       const cwrap=document.createElement('div');cwrap.className='chart-wrap';
+      const dragWrap=document.createElement('div');dragWrap.className='comp-drag-wrap';
+      const selOvStack=document.createElement('div');selOvStack.className='comp-sel-overlay';
       const canvas=document.createElement('canvas');canvas.className='comp-stack-canvas';
-      cwrap.appendChild(canvas);wrap.appendChild(cwrap);container.appendChild(wrap);
+      dragWrap.appendChild(canvas);dragWrap.appendChild(selOvStack);
+      cwrap.appendChild(dragWrap);wrap.appendChild(cwrap);container.appendChild(wrap);
+      stackDragWraps.push({dragWrap,selOv:selOvStack});
 
       const tr = t.trimRange || {start:0, end:1};
       const trimmed = getTrimmedLog(t);
       const sliced=sliceByRange(trimmed);
       const ds=downsample(sliced,MAX_COMP_PTS);
-      // Peak markers (same logic as overlay)
       const radii=ds.map(()=>0);
       if(t.peaks && compAxis==='abs'){
         const trimS=Math.floor(tr.start*t.fullLog.length);
-        const trimE=Math.min(t.fullLog.length, Math.ceil(tr.end*t.fullLog.length));
         const rangeS=Math.floor(rangeL/100*trimmed.length);
         const rangeE=Math.min(trimmed.length, Math.ceil(rangeR/100*trimmed.length));
         const sliceLen=rangeE-rangeS;
@@ -1064,6 +1073,7 @@ function renderCompare(){
       });
       compCharts.push(ch);
     }
+    setupCompDragStack(stackDragWraps);
   }
   renderStats();
 }
@@ -1135,7 +1145,7 @@ function updateRangeUI(){
   updateRangeUI();
 })();
 
-/* ===== Compare drag selection (overlay mode) ===== */
+/* ===== Compare drag selection (shared logic) ===== */
 let compDragActive=false, compDragX0=0, compDragStartPct=0, compDragEndPct=0;
 
 function setupCompDrag(){
@@ -1183,6 +1193,50 @@ function setupCompDrag(){
   wrap.addEventListener('touchstart',e=>{onStart(e.touches[0].clientX);e.preventDefault()},{passive:false});
   wrap.addEventListener('touchmove',e=>{onMove(e.touches[0].clientX);e.preventDefault()},{passive:false});
   wrap.addEventListener('touchend',onEnd);
+}
+
+function setupCompDragStack(wraps){
+  if(!wraps||!wraps.length) return;
+  let active=false, x0=0, startPct=0, endPct=0, activeWrap=null;
+
+  function onStart(clientX, dw){
+    active=true; activeWrap=dw;
+    const r=dw.dragWrap.getBoundingClientRect();
+    x0=clientX-r.left; startPct=x0/r.width; endPct=startPct;
+    wraps.forEach(w=>{w.selOv.style.display='block';w.selOv.style.left=((startPct)*100)+'%';w.selOv.style.width='0'});
+  }
+  function onMove(clientX){
+    if(!active||!activeWrap) return;
+    const r=activeWrap.dragWrap.getBoundingClientRect();
+    const x=Math.max(0,Math.min(r.width,clientX-r.left));
+    endPct=x/r.width;
+    const lPct=Math.min(startPct,endPct)*100, wPct=Math.abs(endPct-startPct)*100;
+    wraps.forEach(w=>{w.selOv.style.left=lPct+'%';w.selOv.style.width=wPct+'%'});
+  }
+  function onEnd(){
+    if(!active) return;
+    active=false; activeWrap=null;
+    if(Math.abs(endPct-startPct)<0.01){
+      wraps.forEach(w=>w.selOv.style.display='none');
+      return;
+    }
+    rangeL=Math.round(Math.min(startPct,endPct)*100);
+    rangeR=Math.round(Math.max(startPct,endPct)*100);
+    updateRangeUI();
+    renderCompare();
+  }
+
+  wraps.forEach(w=>{
+    w.dragWrap.addEventListener('mousedown',e=>{onStart(e.clientX,w);e.preventDefault()});
+    w.dragWrap.addEventListener('mousemove',e=>onMove(e.clientX));
+    w.dragWrap.addEventListener('mouseup',onEnd);
+    w.dragWrap.addEventListener('mouseleave',()=>{if(active&&activeWrap===w){}/* let onEnd handle via document */});
+    w.dragWrap.addEventListener('touchstart',e=>{onStart(e.touches[0].clientX,w);e.preventDefault()},{passive:false});
+    w.dragWrap.addEventListener('touchmove',e=>{onMove(e.touches[0].clientX);e.preventDefault()},{passive:false});
+    w.dragWrap.addEventListener('touchend',onEnd);
+  });
+  // Global mouseup to handle drag ending outside element
+  document.addEventListener('mouseup',()=>{if(active)onEnd()});
 }
 
 /* ===== Init ===== */
