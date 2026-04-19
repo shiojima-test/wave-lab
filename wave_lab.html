@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WAVE LAB v1.0</title>
+<title>WAVE LAB v1.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -15,7 +15,6 @@
 body{font-family:'Noto Sans JP',Meiryo,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
 a{color:var(--teal);text-decoration:none}
 
-/* Header */
 .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
 .logo{background:var(--teal);color:#fff;font-weight:900;font-size:18px;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;letter-spacing:-1px}
 .header-title{flex:1}
@@ -28,22 +27,20 @@ a{color:var(--teal);text-decoration:none}
 .ble-dot{width:10px;height:10px;border-radius:50%;background:#ccc;flex-shrink:0}
 .ble-dot.on{background:#4caf50;box-shadow:0 0 6px #4caf50}
 
-/* Main */
-.main{flex:1;max-width:800px;width:100%;margin:0 auto;padding:16px}
+.main{flex:1;max-width:1400px;width:100%;margin:0 auto;padding:16px}
 .view{display:none}
 .view.active{display:block}
+/* Compare view gets extra width */
+#v-compare.active ~ .main, .main:has(#v-compare.active){max-width:1600px}
 
-/* Cards */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
 .card h2{font-size:16px;margin-bottom:14px;font-weight:700}
 
-/* Form */
 .form-group{margin-bottom:12px}
 .form-group label{display:block;font-size:13px;font-weight:700;margin-bottom:4px;color:var(--text2)}
 .form-group input,.form-group textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:var(--text)}
 .form-group input:focus,.form-group textarea:focus{outline:none;border-color:var(--teal)}
 
-/* Buttons */
 .btn{display:block;width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;transition:opacity .15s}
 .btn:hover{opacity:.88}
 .btn:disabled{opacity:.4;cursor:not-allowed}
@@ -51,8 +48,8 @@ a{color:var(--teal);text-decoration:none}
 .btn-orange{background:var(--orange);color:#fff}
 .btn-danger{background:#C94040;color:#fff}
 .btn-outline{background:transparent;border:2px solid var(--border);color:var(--text)}
+.btn-sm{padding:8px 16px;font-size:13px;width:auto;display:inline-block;border-radius:8px}
 
-/* Takes list */
 .takes-list{margin-top:16px}
 .take-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .take-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
@@ -61,7 +58,6 @@ a{color:var(--teal);text-decoration:none}
 .take-info .tloc{color:var(--text2);font-size:12px}
 .take-count{font-size:12px;color:var(--text2)}
 
-/* Measurement */
 .back-link{font-size:13px;margin-bottom:12px;display:inline-block;cursor:pointer}
 .take-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;margin-bottom:14px}
 .take-bar .dot{width:14px;height:14px;border-radius:50%}
@@ -73,7 +69,7 @@ a{color:var(--teal);text-decoration:none}
 .axis-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
 
 .chart-wrap{background:#fff;border-radius:10px;border:1px solid var(--border);padding:10px;margin-bottom:14px}
-.chart-wrap canvas{width:100%!important;height:200px!important}
+.chart-wrap canvas{width:100%!important;height:300px!important}
 
 .live-vals{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
 .lv{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center}
@@ -85,7 +81,6 @@ a{color:var(--teal);text-decoration:none}
 
 .timer-display{text-align:center;font-size:14px;color:var(--text2);margin-bottom:10px;font-variant-numeric:tabular-nums}
 
-/* Compare */
 .mode-toggle{display:flex;gap:6px;margin-bottom:14px}
 .mode-btn{flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);font-size:13px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit}
 .mode-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
@@ -96,7 +91,8 @@ a{color:var(--teal);text-decoration:none}
 
 .compare-chart-wrap{margin-bottom:14px}
 .compare-chart-wrap .chart-label{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px}
-.compare-chart-wrap canvas{width:100%!important;height:200px!important}
+.comp-overlay-canvas{width:100%!important;height:500px!important}
+.comp-stack-canvas{width:100%!important;height:280px!important}
 
 .stats-section{margin-top:14px}
 .stats-toggle{font-size:13px;font-weight:700;cursor:pointer;padding:10px 0;display:flex;align-items:center;gap:6px;color:var(--text2)}
@@ -107,11 +103,38 @@ a{color:var(--teal);text-decoration:none}
 .stats-table th{background:var(--bg);font-weight:700;font-size:11px;color:var(--text2)}
 .stats-table td{font-variant-numeric:tabular-nums}
 
-/* Footer */
+/* Range slider */
+.range-bar{position:relative;margin:10px 0 16px;user-select:none;touch-action:none}
+.range-track{height:6px;background:var(--border);border-radius:3px;position:relative}
+.range-fill{position:absolute;top:0;height:100%;background:var(--teal);border-radius:3px;opacity:.3}
+.range-handle{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;background:var(--teal);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transform:translate(-50%,-50%);cursor:grab;z-index:2}
+.range-handle:active{cursor:grabbing;transform:translate(-50%,-50%) scale(1.15)}
+.range-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-top:4px}
+.range-reset-row{text-align:center;margin-bottom:10px}
+.range-reset{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)}
+.range-reset:hover{border-color:var(--teal);color:var(--teal)}
+
+/* Project cards */
+.proj-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
+.proj-info{flex:1}
+.proj-info .pname{font-weight:700;font-size:14px}
+.proj-info .pdesc{font-size:12px;color:var(--text2)}
+.proj-info .pmeta{font-size:11px;color:var(--text2);margin-top:2px}
+.proj-btns{display:flex;gap:6px}
+.proj-btns button{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.proj-btns .open-btn{background:var(--teal);color:#fff;border-color:var(--teal)}
+.proj-btns .del-btn{color:#C94040;border-color:#C9404044}
+
+.proj-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.proj-name-badge{background:var(--teal);color:#fff;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700}
+
 .footer{text-align:center;padding:16px;font-size:11px;color:var(--text2)}
 
 @media(max-width:768px){
-  .main{padding:10px}
+  .main{padding:10px;max-width:100%!important}
+  .chart-wrap canvas{height:200px!important}
+  .comp-overlay-canvas{height:250px!important}
+  .comp-stack-canvas{height:160px!important}
   .live-vals{grid-template-columns:repeat(4,1fr);gap:4px}
   .lv .val{font-size:14px}
   .lv .label{font-size:9px}
@@ -120,12 +143,11 @@ a{color:var(--teal);text-decoration:none}
 </head>
 <body>
 
-<!-- Header -->
 <div class="header">
   <div class="logo">WL</div>
   <div class="header-title">
     <h1>WAVE LAB</h1>
-    <div class="sub">SENSOR COMPARE LAB v1.0</div>
+    <div class="sub">SENSOR COMPARE LAB v1.1</div>
   </div>
   <div class="ble-area">
     <button class="ble-btn" id="bleBtn" onclick="toggleBLE()">BLE接続</button>
@@ -133,13 +155,33 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
-<!-- Main -->
 <div class="main">
 
-  <!-- Screen 1: Setup -->
-  <div class="view active" id="v-setup">
+  <!-- Screen 0: Projects -->
+  <div class="view active" id="v-projects">
     <div class="card">
-      <h2>セッション設定</h2>
+      <h2>+ 新規プロジェクト作成</h2>
+      <div class="form-group">
+        <label>プロジェクト名 *</label>
+        <input type="text" id="projName" placeholder="例: 剣道部 5月練習 / バスケ比較">
+      </div>
+      <div class="form-group">
+        <label>説明（任意）</label>
+        <input type="text" id="projDesc" placeholder="自由記入">
+      </div>
+      <button class="btn btn-teal" onclick="createProject()">プロジェクトを作成</button>
+    </div>
+    <div id="projList"></div>
+  </div>
+
+  <!-- Screen 1: Setup -->
+  <div class="view" id="v-setup">
+    <div class="proj-header">
+      <a class="back-link" onclick="closeProject()">&larr; プロジェクト一覧</a>
+      <div class="proj-name-badge" id="setupProjName"></div>
+    </div>
+    <div class="card">
+      <h2>テイク追加</h2>
       <div class="form-group">
         <label>テイク名 *</label>
         <input type="text" id="inName" placeholder="例: 田中 / 1回目" oninput="checkSetupReady()">
@@ -162,7 +204,6 @@ a{color:var(--teal);text-decoration:none}
   <div class="view" id="v-meas">
     <a class="back-link" onclick="goTo('v-setup')">&larr; セッション設定</a>
     <div class="take-bar" id="measBar"><div class="dot"></div><span class="info"></span><span class="loc"></span></div>
-
     <div class="axis-btns" id="liveAxisBtns">
       <button class="axis-btn active" data-ax="abs">ABS</button>
       <button class="axis-btn" data-ax="ax">AX</button>
@@ -170,9 +211,7 @@ a{color:var(--teal);text-decoration:none}
       <button class="axis-btn" data-ax="az">AZ</button>
       <button class="axis-btn" data-ax="gyro">GYRO</button>
     </div>
-
     <div class="chart-wrap"><canvas id="liveChart"></canvas></div>
-
     <div class="live-vals">
       <div class="lv"><div class="label">ABS(G)</div><div class="val" id="lvAbs">-</div></div>
       <div class="lv"><div class="label">Ax</div><div class="val" id="lvAx">-</div></div>
@@ -183,47 +222,48 @@ a{color:var(--teal);text-decoration:none}
       <div class="lv"><div class="label">Gz</div><div class="val" id="lvGz">-</div></div>
       <div class="lv"><div class="label">GYRO</div><div class="val" id="lvGyro">-</div></div>
     </div>
-
     <div class="timer-display" id="timerDisp">00:00.0</div>
-
     <div class="rec-btns">
       <button class="btn btn-teal" id="btnRec" onclick="startRec()">&#9679; 記録開始</button>
       <button class="btn btn-danger" id="btnStop" onclick="stopRec()" disabled>&#9632; 停止</button>
     </div>
-
     <button class="btn btn-orange" id="btnSave" style="display:none" onclick="saveTake()">このデータを保存して次へ &rarr;</button>
   </div>
 
   <!-- Screen 3: Compare -->
   <div class="view" id="v-compare">
     <a class="back-link" onclick="goTo('v-setup')">&larr; セッション設定</a>
-
     <div class="mode-toggle">
       <button class="mode-btn active" id="modeOverlay" onclick="setCompMode('overlay')">重ね合わせ</button>
       <button class="mode-btn" id="modeStack" onclick="setCompMode('stack')">縦並び</button>
     </div>
-
     <div class="axis-btns" id="compAxisBtns">
       <button class="axis-btn active" data-ax="abs">ABS</button>
       <button class="axis-btn" data-ax="ax">AX</button>
       <button class="axis-btn" data-ax="ay">AY</button>
       <button class="axis-btn" data-ax="az">AZ</button>
     </div>
-
     <div class="legend" id="compLegend"></div>
     <div id="compCharts"></div>
-
+    <!-- Range slider -->
+    <div class="range-reset-row"><button class="range-reset" onclick="resetRange()">全範囲リセット</button></div>
+    <div class="range-bar" id="rangeBar">
+      <div class="range-track">
+        <div class="range-fill" id="rangeFill"></div>
+        <div class="range-handle" id="handleL" style="left:0%"></div>
+        <div class="range-handle" id="handleR" style="left:100%"></div>
+      </div>
+      <div class="range-labels"><span id="rangeLabelL">0%</span><span id="rangeLabelR">100%</span></div>
+    </div>
     <div class="stats-section">
       <div class="stats-toggle" id="statsToggle" onclick="toggleStats()">統計情報</div>
       <div id="statsBody" style="display:none"></div>
     </div>
-
-    <button class="btn btn-outline" style="margin-top:20px" onclick="resetAll()">最初からやり直す</button>
+    <button class="btn btn-outline" style="margin-top:20px" onclick="closeProject()">プロジェクト一覧に戻る</button>
   </div>
 </div>
 
-<!-- Footer -->
-<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.0</div>
+<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.1</div>
 
 <script>
 /* ===== Constants ===== */
@@ -233,10 +273,12 @@ const RX_UUID  = '6e400002-b5b3-f393-e0a9-e50e24dcca9e';
 const TAKE_COLORS = ['#3AABA8','#E88A0A','#2E8EC4','#C94040','#7B5EA7'];
 const MAX_LIVE = 200;
 const MAX_COMP_PTS = 1000;
+const LS_KEY = 'wave-lab-projects';
 
 /* ===== State ===== */
 let bleDevice = null, bleChar = null, bleConnected = false;
-let takes = [];
+let projects = [];
+let currentProject = null; // reference into projects[]
 let currentTake = null;
 let liveBuffer = [];
 let fullLog = [];
@@ -246,6 +288,23 @@ let compMode = 'overlay';
 let compAxis = 'abs';
 let recStart = 0, timerInterval = null;
 let partialLine = '';
+let rangeL = 0, rangeR = 100; // % range for compare
+
+/* ===== Persistence ===== */
+function saveProjects(){
+  // Save without fullLog to keep localStorage small; keep fullLog in memory
+  const slim = projects.map(p => ({
+    ...p,
+    takes: p.takes.map(t => ({...t, fullLog: t.fullLog}))
+  }));
+  try { localStorage.setItem(LS_KEY, JSON.stringify(slim)); } catch(e) { console.warn('Storage full', e); }
+}
+function loadProjects(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) projects = JSON.parse(raw);
+  } catch(e) { projects = []; }
+}
 
 /* ===== BLE ===== */
 async function toggleBLE(){
@@ -261,7 +320,7 @@ async function toggleBLE(){
     const tx = await svc.getCharacteristic(TX_UUID);
     await tx.startNotifications();
     tx.addEventListener('characteristicvaluechanged', onBLEData);
-    bleChar = await svc.getCharacteristic(RX_UUID);
+    try { bleChar = await svc.getCharacteristic(RX_UUID); } catch(e) { bleChar = null; }
     setBLEState(true);
   }catch(e){console.error('BLE error',e)}
 }
@@ -279,8 +338,7 @@ function setBLEState(on){
 }
 
 function onBLEData(e){
-  const dec = new TextDecoder();
-  const chunk = dec.decode(e.target.value);
+  const chunk = new TextDecoder().decode(e.target.value);
   partialLine += chunk;
   const lines = partialLine.split('\n');
   partialLine = lines.pop();
@@ -288,12 +346,8 @@ function onBLEData(e){
     if(!line.trim()) continue;
     const parts = line.trim().split(',');
     if(parts.length < 7) continue;
-    const ax = parseFloat(parts[0])||0;
-    const ay = parseFloat(parts[1])||0;
-    const az = parseFloat(parts[2])||0;
-    const gx = parseFloat(parts[3])||0;
-    const gy = parseFloat(parts[4])||0;
-    const gz = parseFloat(parts[5])||0;
+    const ax=parseFloat(parts[0])||0, ay=parseFloat(parts[1])||0, az=parseFloat(parts[2])||0;
+    const gx=parseFloat(parts[3])||0, gy=parseFloat(parts[4])||0, gz=parseFloat(parts[5])||0;
     let abs = parts.length>=8 ? parseFloat(parts[7]) : 0;
     if(!abs||isNaN(abs)) abs = Math.sqrt(ax*ax+ay*ay+az*az);
     const t = Date.now();
@@ -310,32 +364,79 @@ function goTo(id){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(id==='v-setup') renderTakesList();
+  if(id==='v-projects') renderProjList();
+}
+
+/* ===== Projects ===== */
+function createProject(){
+  const name = document.getElementById('projName').value.trim();
+  if(!name){alert('プロジェクト名を入力してください');return}
+  const desc = document.getElementById('projDesc').value.trim();
+  const proj = { id: Date.now(), name, description: desc, createdAt: Date.now(), takes: [] };
+  projects.push(proj);
+  saveProjects();
+  document.getElementById('projName').value='';
+  document.getElementById('projDesc').value='';
+  openProject(projects.length-1);
+}
+function openProject(idx){
+  currentProject = projects[idx];
+  document.getElementById('setupProjName').textContent = currentProject.name;
+  goTo('v-setup');
+}
+function deleteProject(idx){
+  if(!confirm(`「${projects[idx].name}」を削除しますか？`)) return;
+  projects.splice(idx,1);
+  saveProjects();
+  renderProjList();
+}
+function closeProject(){
+  if(recording){stopRec();}
+  currentProject = null;
+  goTo('v-projects');
+}
+function renderProjList(){
+  const el = document.getElementById('projList');
+  if(!projects.length){el.innerHTML='<div style="text-align:center;color:var(--text2);padding:20px;font-size:13px">プロジェクトがありません</div>';return}
+  el.innerHTML = projects.map((p,i) => {
+    const d = new Date(p.createdAt);
+    const dateStr = `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+    return `<div class="proj-item">
+      <div class="proj-info">
+        <div class="pname">${esc(p.name)}</div>
+        ${p.description ? '<div class="pdesc">'+esc(p.description)+'</div>' : ''}
+        <div class="pmeta">${p.takes.length} テイク / ${dateStr}</div>
+      </div>
+      <div class="proj-btns">
+        <button class="open-btn" onclick="openProject(${i})">開く</button>
+        <button class="del-btn" onclick="deleteProject(${i})">削除</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ===== Setup ===== */
 function checkSetupReady(){
   const name = document.getElementById('inName').value.trim();
-  document.getElementById('btnStartMeas').disabled = !(bleConnected && name && takes.length<5);
+  const maxTakes = currentProject ? 5 - currentProject.takes.length : 0;
+  document.getElementById('btnStartMeas').disabled = !(bleConnected && name && maxTakes > 0);
 }
 function startMeas(){
+  if(!currentProject) return;
   const name = document.getElementById('inName').value.trim();
   const loc = document.getElementById('inLoc').value.trim();
   const memo = document.getElementById('inMemo').value.trim();
-  const color = TAKE_COLORS[takes.length];
+  const color = TAKE_COLORS[currentProject.takes.length % TAKE_COLORS.length];
   currentTake = {name,location:loc,memo,color};
-  liveBuffer=[];
-  fullLog=[];
-  recording=false;
+  liveBuffer=[];fullLog=[];recording=false;
   document.getElementById('btnSave').style.display='none';
   document.getElementById('btnRec').disabled=false;
   document.getElementById('btnStop').disabled=true;
   document.getElementById('timerDisp').textContent='00:00.0';
-
   const bar=document.getElementById('measBar');
   bar.querySelector('.dot').style.background=color;
   bar.querySelector('.info').textContent=name;
   bar.querySelector('.loc').textContent=loc?('/ '+loc):'';
-
   initLiveChart(color);
   goTo('v-meas');
   startLiveLoop();
@@ -348,12 +449,10 @@ function initLiveChart(color){
   const ctx=document.getElementById('liveChart').getContext('2d');
   liveChart=new Chart(ctx,{
     type:'line',
-    data:{labels:[], datasets:[{data:[],borderColor:color,borderWidth:1.5,pointRadius:0,tension:.2}]},
-    options:{
-      animation:false,responsive:true,maintainAspectRatio:false,
+    data:{labels:[],datasets:[{data:[],borderColor:color,borderWidth:1.5,pointRadius:0,tension:.2}]},
+    options:{animation:false,responsive:true,maintainAspectRatio:false,
       scales:{x:{display:false},y:{beginAtZero:false,ticks:{font:{size:10}}}},
-      plugins:{legend:{display:false}}
-    }
+      plugins:{legend:{display:false}}}
   });
 }
 function startLiveLoop(){
@@ -366,12 +465,8 @@ function startLiveLoop(){
   liveLoopId=requestAnimationFrame(loop);
 }
 function getAxisVal(s,axis){
-  if(axis==='abs')return s.abs;
-  if(axis==='ax')return s.ax;
-  if(axis==='ay')return s.ay;
-  if(axis==='az')return s.az;
-  if(axis==='gyro')return Math.sqrt(s.gx*s.gx+s.gy*s.gy+s.gz*s.gz);
-  return s.abs;
+  if(axis==='abs')return s.abs;if(axis==='ax')return s.ax;if(axis==='ay')return s.ay;if(axis==='az')return s.az;
+  if(axis==='gyro')return Math.sqrt(s.gx*s.gx+s.gy*s.gy+s.gz*s.gz);return s.abs;
 }
 function updateLiveChart(){
   if(!liveChart)return;
@@ -388,8 +483,7 @@ function updateLiveVals(s){
   document.getElementById('lvGx').textContent=s.gx.toFixed(1);
   document.getElementById('lvGy').textContent=s.gy.toFixed(1);
   document.getElementById('lvGz').textContent=s.gz.toFixed(1);
-  const gyro=Math.sqrt(s.gx*s.gx+s.gy*s.gy+s.gz*s.gz);
-  document.getElementById('lvGyro').textContent=gyro.toFixed(1);
+  document.getElementById('lvGyro').textContent=Math.sqrt(s.gx*s.gx+s.gy*s.gy+s.gz*s.gz).toFixed(1);
 }
 
 /* Axis selector – live */
@@ -402,9 +496,7 @@ document.getElementById('liveAxisBtns').addEventListener('click',e=>{
 
 /* ===== Recording ===== */
 function startRec(){
-  fullLog=[];
-  recording=true;
-  recStart=Date.now();
+  fullLog=[];recording=true;recStart=Date.now();
   document.getElementById('btnRec').disabled=true;
   document.getElementById('btnStop').disabled=false;
   document.getElementById('btnSave').style.display='none';
@@ -418,27 +510,20 @@ function stopRec(){
   if(fullLog.length>0) document.getElementById('btnSave').style.display='block';
 }
 function updateTimer(){
-  const el=Date.now()-recStart;
-  const s=Math.floor(el/1000);
-  const m=Math.floor(s/60);
-  const ss=s%60;
-  const ms=Math.floor((el%1000)/100);
-  document.getElementById('timerDisp').textContent=String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0')+'.'+ms;
+  const el=Date.now()-recStart;const s=Math.floor(el/1000);const m=Math.floor(s/60);
+  document.getElementById('timerDisp').textContent=String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0')+'.'+Math.floor((el%1000)/100);
 }
 
 /* ===== Save take ===== */
 function saveTake(){
+  if(!currentProject) return;
   const metrics=calcMetrics(fullLog);
   const take={
-    id:Date.now(),
-    name:currentTake.name,
-    location:currentTake.location,
-    memo:currentTake.memo,
-    color:currentTake.color,
-    fullLog:[...fullLog],
-    metrics
+    id:Date.now(), name:currentTake.name, location:currentTake.location,
+    memo:currentTake.memo, color:currentTake.color, fullLog:[...fullLog], metrics
   };
-  takes.push(take);
+  currentProject.takes.push(take);
+  saveProjects();
   document.getElementById('inName').value='';
   document.getElementById('inLoc').value='';
   document.getElementById('inMemo').value='';
@@ -450,47 +535,38 @@ function calcMetrics(log){
   if(!log.length)return{maxImpact:0,avgImpact:0,peakCount:0,maxGyro:0,duration:0};
   const absVals=log.map(s=>s.abs);
   const baseline=absVals.reduce((a,b)=>a+b,0)/absVals.length;
-  const peaks=[];
-  let lastPeakT=0;
+  const peaks=[];let lastPeakT=0;
   for(let i=1;i<log.length-1;i++){
     const v=log[i].abs;
-    if(v>baseline+0.5 && v>log[i-1].abs && v>log[i+1].abs){
-      if(log[i].t-lastPeakT>=300){
-        peaks.push(v);
-        lastPeakT=log[i].t;
-      }
+    if(v>baseline+0.5&&v>log[i-1].abs&&v>log[i+1].abs){
+      if(log[i].t-lastPeakT>=300){peaks.push(v);lastPeakT=log[i].t;}
     }
   }
   const maxImpact=Math.max(...absVals);
-  const avgImpact=peaks.length? peaks.reduce((a,b)=>a+b,0)/peaks.length : absVals.reduce((a,b)=>a+b,0)/absVals.length;
-  const peakCount=peaks.length;
+  const avgImpact=peaks.length?peaks.reduce((a,b)=>a+b,0)/peaks.length:absVals.reduce((a,b)=>a+b,0)/absVals.length;
   let maxGyro=0;
-  for(const s of log){
-    const g=Math.sqrt(s.gx*s.gx+s.gy*s.gy+s.gz*s.gz);
-    if(g>maxGyro)maxGyro=g;
-  }
-  const duration=(log[log.length-1].t-log[0].t)/1000;
-  return{maxImpact,avgImpact,peakCount,maxGyro,duration};
+  for(const s of log){const g=Math.sqrt(s.gx*s.gx+s.gy*s.gy+s.gz*s.gz);if(g>maxGyro)maxGyro=g;}
+  return{maxImpact,avgImpact,peakCount:peaks.length,maxGyro,duration:(log[log.length-1].t-log[0].t)/1000};
 }
 
 /* ===== Takes list ===== */
 function renderTakesList(){
+  if(!currentProject){goTo('v-projects');return}
+  const takes = currentProject.takes;
   const el=document.getElementById('takesList');
   if(!takes.length){el.innerHTML='';document.getElementById('btnCompare').style.display='none';checkSetupReady();return}
   let html='<div class="card"><h2>保存済みテイク</h2>';
   for(const t of takes){
-    html+=`<div class="take-item">
-      <div class="take-dot" style="background:${t.color}"></div>
-      <div class="take-info"><span class="tname">${esc(t.name)}</span><br><span class="tloc">${esc(t.location)}</span></div>
-      <div class="take-count">${t.fullLog.length} pts</div>
-    </div>`;
+    html+=`<div class="take-item"><div class="take-dot" style="background:${t.color}"></div>
+      <div class="take-info"><span class="tname">${esc(t.name)}</span><br><span class="tloc">${esc(t.location||'')}</span></div>
+      <div class="take-count">${t.fullLog.length} pts</div></div>`;
   }
   html+='</div>';
   el.innerHTML=html;
   document.getElementById('btnCompare').style.display=takes.length>=2?'block':'none';
   checkSetupReady();
 }
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 /* ===== Compare ===== */
 let compCharts=[];
@@ -510,79 +586,62 @@ document.getElementById('compAxisBtns').addEventListener('click',e=>{
 
 function downsample(arr,max){
   if(arr.length<=max)return arr;
-  const step=arr.length/max;
-  const out=[];
+  const step=arr.length/max;const out=[];
   for(let i=0;i<max;i++) out.push(arr[Math.floor(i*step)]);
   return out;
 }
 
-function renderCompare(){
-  compCharts.forEach(c=>c.destroy());
-  compCharts=[];
-  const container=document.getElementById('compCharts');
-  container.innerHTML='';
+function sliceByRange(arr){
+  const n=arr.length;
+  const iS=Math.floor(rangeL/100*n);
+  const iE=Math.min(n,Math.ceil(rangeR/100*n));
+  return arr.slice(iS,iE);
+}
 
-  // legend
+function renderCompare(){
+  if(!currentProject) return;
+  const takes = currentProject.takes;
+  compCharts.forEach(c=>c.destroy());compCharts=[];
+  const container=document.getElementById('compCharts');container.innerHTML='';
+
   const leg=document.getElementById('compLegend');
   leg.innerHTML=takes.map(t=>`<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div>${esc(t.name)}</div>`).join('');
 
   if(compMode==='overlay'){
     const canvas=document.createElement('canvas');
-    canvas.style.cssText='width:100%!important;height:250px!important';
-    const wrap=document.createElement('div');
-    wrap.className='chart-wrap';
-    wrap.appendChild(canvas);
-    container.appendChild(wrap);
+    canvas.className='comp-overlay-canvas';
+    const wrap=document.createElement('div');wrap.className='chart-wrap';wrap.appendChild(canvas);container.appendChild(wrap);
 
     const datasets=takes.map(t=>{
-      const ds=downsample(t.fullLog,MAX_COMP_PTS);
-      const maxLen=ds.length;
-      return{
-        label:t.name,
-        data:ds.map((s,i)=>({x:(i/(maxLen-1||1))*100, y:getAxisVal(s,compAxis)})),
-        borderColor:t.color,borderWidth:1.5,pointRadius:0,tension:.2,fill:false
-      };
+      const sliced=sliceByRange(t.fullLog);
+      const ds=downsample(sliced,MAX_COMP_PTS);
+      return{label:t.name,data:ds.map((s,i)=>({x:(i/(ds.length-1||1))*100,y:getAxisVal(s,compAxis)})),
+        borderColor:t.color,borderWidth:1.5,pointRadius:0,tension:.2,fill:false};
     });
-    const ch=new Chart(canvas.getContext('2d'),{
-      type:'line',
-      data:{datasets},
-      options:{
-        animation:false,responsive:true,maintainAspectRatio:false,
+    const ch=new Chart(canvas.getContext('2d'),{type:'line',data:{datasets},
+      options:{animation:false,responsive:true,maintainAspectRatio:false,
         scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:11}},ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}},
-        plugins:{legend:{display:false}}
-      }
+        plugins:{legend:{display:false}}}
     });
     compCharts.push(ch);
   } else {
     for(const t of takes){
-      const wrap=document.createElement('div');
-      wrap.className='compare-chart-wrap';
-      const label=document.createElement('div');
-      label.className='chart-label';
-      label.innerHTML=`<div class="legend-dot" style="background:${t.color}"></div> ${esc(t.name)} <span style="color:var(--text2);font-weight:400;font-size:12px">${esc(t.location)}</span>`;
+      const wrap=document.createElement('div');wrap.className='compare-chart-wrap';
+      const label=document.createElement('div');label.className='chart-label';
+      label.innerHTML=`<div class="legend-dot" style="background:${t.color}"></div> ${esc(t.name)} <span style="color:var(--text2);font-weight:400;font-size:12px">${esc(t.location||'')}</span>`;
       wrap.appendChild(label);
-      const cwrap=document.createElement('div');
-      cwrap.className='chart-wrap';
-      const canvas=document.createElement('canvas');
-      canvas.style.cssText='width:100%!important;height:160px!important';
-      cwrap.appendChild(canvas);
-      wrap.appendChild(cwrap);
-      container.appendChild(wrap);
+      const cwrap=document.createElement('div');cwrap.className='chart-wrap';
+      const canvas=document.createElement('canvas');canvas.className='comp-stack-canvas';
+      cwrap.appendChild(canvas);wrap.appendChild(cwrap);container.appendChild(wrap);
 
-      const ds=downsample(t.fullLog,MAX_COMP_PTS);
-      const ch=new Chart(canvas.getContext('2d'),{
-        type:'line',
-        data:{
-          datasets:[{
-            data:ds.map((s,i)=>({x:(i/(ds.length-1||1))*100,y:getAxisVal(s,compAxis)})),
-            borderColor:t.color,borderWidth:1.5,pointRadius:0,tension:.2,fill:false
-          }]
-        },
-        options:{
-          animation:false,responsive:true,maintainAspectRatio:false,
+      const sliced=sliceByRange(t.fullLog);
+      const ds=downsample(sliced,MAX_COMP_PTS);
+      const ch=new Chart(canvas.getContext('2d'),{type:'line',
+        data:{datasets:[{data:ds.map((s,i)=>({x:(i/(ds.length-1||1))*100,y:getAxisVal(s,compAxis)})),
+          borderColor:t.color,borderWidth:1.5,pointRadius:0,tension:.2,fill:false}]},
+        options:{animation:false,responsive:true,maintainAspectRatio:false,
           scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:10}},ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}},
-          plugins:{legend:{display:false}}
-        }
+          plugins:{legend:{display:false}}}
       });
       compCharts.push(ch);
     }
@@ -591,39 +650,69 @@ function renderCompare(){
 }
 
 function renderStats(){
+  if(!currentProject) return;
+  const takes = currentProject.takes;
   const body=document.getElementById('statsBody');
   let html='<table class="stats-table"><thead><tr><th>テイク</th><th>最大衝撃(G)</th><th>平均衝撃(G)</th><th>ピーク数</th><th>最大角速度</th><th>時間(s)</th></tr></thead><tbody>';
   for(const t of takes){
     const m=t.metrics;
     html+=`<tr><td style="color:${t.color};font-weight:700">${esc(t.name)}</td><td>${m.maxImpact.toFixed(2)}</td><td>${m.avgImpact.toFixed(2)}</td><td>${m.peakCount}</td><td>${m.maxGyro.toFixed(1)}</td><td>${m.duration.toFixed(1)}</td></tr>`;
   }
-  html+='</tbody></table>';
-  body.innerHTML=html;
+  html+='</tbody></table>';body.innerHTML=html;
 }
 function toggleStats(){
-  const tog=document.getElementById('statsToggle');
-  const body=document.getElementById('statsBody');
-  const open=body.style.display!=='none';
+  const body=document.getElementById('statsBody');const open=body.style.display!=='none';
   body.style.display=open?'none':'block';
-  tog.classList.toggle('open',!open);
+  document.getElementById('statsToggle').classList.toggle('open',!open);
 }
 
-/* ===== Reset ===== */
-function resetAll(){
-  takes=[];
-  fullLog=[];
-  liveBuffer=[];
-  recording=false;
-  currentTake=null;
-  clearInterval(timerInterval);
-  document.getElementById('inName').value='';
-  document.getElementById('inLoc').value='';
-  document.getElementById('inMemo').value='';
-  goTo('v-setup');
+/* ===== Range slider ===== */
+function resetRange(){rangeL=0;rangeR=100;updateRangeUI();renderCompare()}
+function updateRangeUI(){
+  document.getElementById('handleL').style.left=rangeL+'%';
+  document.getElementById('handleR').style.left=rangeR+'%';
+  document.getElementById('rangeFill').style.left=rangeL+'%';
+  document.getElementById('rangeFill').style.width=(rangeR-rangeL)+'%';
+  document.getElementById('rangeLabelL').textContent=Math.round(rangeL)+'%';
+  document.getElementById('rangeLabelR').textContent=Math.round(rangeR)+'%';
 }
+(function initRangeSlider(){
+  const bar=document.getElementById('rangeBar');
+  const track=bar.querySelector('.range-track');
+  let dragging=null;
+  function pct(e){
+    const rect=track.getBoundingClientRect();
+    const x=(e.clientX||e.touches?.[0]?.clientX||0)-rect.left;
+    return Math.max(0,Math.min(100,x/rect.width*100));
+  }
+  function onDown(e){
+    const id=e.target.id;
+    if(id==='handleL')dragging='L';
+    else if(id==='handleR')dragging='R';
+    else return;
+    e.preventDefault();
+  }
+  function onMove(e){
+    if(!dragging)return;
+    const p=pct(e);
+    if(dragging==='L'){rangeL=Math.min(p,rangeR-1);}
+    else{rangeR=Math.max(p,rangeL+1);}
+    updateRangeUI();
+  }
+  function onUp(){
+    if(!dragging)return;
+    dragging=null;
+    renderCompare();
+  }
+  bar.addEventListener('pointerdown',onDown);
+  document.addEventListener('pointermove',onMove);
+  document.addEventListener('pointerup',onUp);
+  updateRangeUI();
+})();
 
 /* ===== Init ===== */
-renderTakesList();
+loadProjects();
+renderProjList();
 </script>
 </body>
 </html>
