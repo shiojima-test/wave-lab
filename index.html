@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WAVE LAB v1.5</title>
+<title>WAVE LAB v1.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -172,7 +172,7 @@ a{color:var(--teal);text-decoration:none}
   <div class="logo">WL</div>
   <div class="header-title">
     <h1>WAVE LAB</h1>
-    <div class="sub">SENSOR COMPARE LAB v1.5</div>
+    <div class="sub">SENSOR COMPARE LAB v1.6</div>
   </div>
   <div class="ble-area">
     <button class="ble-btn" id="bleBtn" onclick="toggleBLE()">BLE接続</button>
@@ -282,6 +282,7 @@ a{color:var(--teal);text-decoration:none}
           <button class="btn-sm btn-outline" onclick="resetTrimRange()">全範囲リセット</button>
         </div>
       </div>
+      <div id="trimStatus" style="text-align:center;font-size:12px;font-weight:700;color:var(--text2);margin-top:10px;padding:6px;background:var(--bg2);border-radius:6px">保存範囲: 全範囲（0%〜100%）</div>
       <div class="review-btns">
         <button class="btn btn-outline" onclick="retryRec()">やり直す</button>
         <button class="btn btn-orange" onclick="saveTake()">このデータを保存して次へ &rarr;</button>
@@ -335,7 +336,7 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
-<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.5</div>
+<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.6</div>
 
 <script>
 /* ===== Constants ===== */
@@ -723,6 +724,7 @@ function saveTake(){
     metrics
   };
   currentProject.takes.push(take);
+  console.log('saveTake:', {name:take.name, trimRange:take.trimRange, fullLogLen:take.fullLog.length, peakCount:take.peaks.length, metricsPC:take.metrics.peakCount});
   saveProjects();
   document.getElementById('inName').value='';
   document.getElementById('inLoc').value='';
@@ -885,9 +887,12 @@ function computeSelInfo(){
   const n=fullLog.length;
   const iS=Math.floor(trimStart*n), iE=Math.min(n-1,Math.ceil(trimEnd*n));
   const peaksInRange=detectedPeaks.filter(p=>p.index>=iS&&p.index<=iE);
-  document.getElementById('selRangeLbl').textContent=Math.round(trimStart*100)+'%〜'+Math.round(trimEnd*100)+'%';
+  const rangeStr=Math.round(trimStart*100)+'%〜'+Math.round(trimEnd*100)+'%';
+  document.getElementById('selRangeLbl').textContent=rangeStr;
   document.getElementById('selPeakLbl').textContent=peaksInRange.length;
   document.getElementById('selInfo').style.display='block';
+  document.getElementById('trimStatus').textContent='保存範囲: '+rangeStr+'（ピーク '+peaksInRange.length+'個）';
+  document.getElementById('trimStatus').style.color='var(--orange)';
 }
 
 function resetTrimRange(){
@@ -896,6 +901,8 @@ function resetTrimRange(){
   document.getElementById('selOv').style.display='none';
   document.getElementById('selInfo').style.display='none';
   document.getElementById('dragHint').style.display='';
+  document.getElementById('trimStatus').textContent='保存範囲: 全範囲（0%〜100%）';
+  document.getElementById('trimStatus').style.color='var(--text2)';
 }
 
 /* ===== Takes list ===== */
@@ -934,6 +941,13 @@ document.getElementById('compAxisBtns').addEventListener('click',e=>{
   renderCompare();
 });
 
+function getTrimmedLog(take){
+  const n=take.fullLog.length;
+  const lo=Math.floor((take.trimRange?.start??0)*n);
+  const hi=Math.min(n,Math.ceil((take.trimRange?.end??1)*n));
+  return take.fullLog.slice(lo,hi);
+}
+
 function downsample(arr,max){
   if(arr.length<=max)return arr;
   const step=arr.length/max;const out=[];
@@ -964,7 +978,7 @@ function renderCompare(){
 
     const datasets=takes.map(t=>{
       const tr = t.trimRange || {start:0, end:1};
-      const trimmed = t.fullLog.slice(Math.floor(tr.start*t.fullLog.length), Math.min(t.fullLog.length, Math.ceil(tr.end*t.fullLog.length)));
+      const trimmed = getTrimmedLog(t);
       const sliced=sliceByRange(trimmed);
       const ds=downsample(sliced,MAX_COMP_PTS);
       // Peak markers
@@ -1007,7 +1021,7 @@ function renderCompare(){
       cwrap.appendChild(canvas);wrap.appendChild(cwrap);container.appendChild(wrap);
 
       const tr = t.trimRange || {start:0, end:1};
-      const trimmed = t.fullLog.slice(Math.floor(tr.start*t.fullLog.length), Math.min(t.fullLog.length, Math.ceil(tr.end*t.fullLog.length)));
+      const trimmed = getTrimmedLog(t);
       const sliced=sliceByRange(trimmed);
       const ds=downsample(sliced,MAX_COMP_PTS);
       // Peak markers (same logic as overlay)
