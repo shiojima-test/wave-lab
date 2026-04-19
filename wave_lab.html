@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WAVE LAB v1.2</title>
+<title>WAVE LAB v1.3</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -160,7 +160,7 @@ a{color:var(--teal);text-decoration:none}
   <div class="logo">WL</div>
   <div class="header-title">
     <h1>WAVE LAB</h1>
-    <div class="sub">SENSOR COMPARE LAB v1.2</div>
+    <div class="sub">SENSOR COMPARE LAB v1.3</div>
   </div>
   <div class="ble-area">
     <button class="ble-btn" id="bleBtn" onclick="toggleBLE()">BLE接続</button>
@@ -225,6 +225,18 @@ a{color:var(--teal);text-decoration:none}
       <button class="axis-btn" data-ax="gyro">GYRO</button>
     </div>
     <div class="chart-wrap"><canvas id="liveChart"></canvas></div>
+    <div class="yrange-section">
+      <div class="yrange-toggle" id="yrangeMeasToggle" onclick="toggleYRangeMeas()">Y軸レンジ設定</div>
+      <div class="yrange-body" id="yrangeMeasBody">
+        <div class="yrange-row">
+          <label>Y min</label>
+          <input type="number" id="yrangeMeasMin" step="0.5" oninput="onYRangeInput('meas')">
+          <label>Y max</label>
+          <input type="number" id="yrangeMeasMax" step="0.5" oninput="onYRangeInput('meas')">
+          <button class="yrange-default-btn" onclick="resetYRangeAxisMeas()">デフォルトに戻す</button>
+        </div>
+      </div>
+    </div>
     <div class="live-vals">
       <div class="lv"><div class="label">ABS(G)</div><div class="val" id="lvAbs">-</div></div>
       <div class="lv"><div class="label">Ax</div><div class="val" id="lvAx">-</div></div>
@@ -273,9 +285,9 @@ a{color:var(--teal);text-decoration:none}
       <div class="yrange-body" id="yrangeBody">
         <div class="yrange-row">
           <label>Y min</label>
-          <input type="number" id="yrangeMin" step="any" oninput="onYRangeInput()">
+          <input type="number" id="yrangeMin" step="0.5" oninput="onYRangeInput('comp')">
           <label>Y max</label>
-          <input type="number" id="yrangeMax" step="any" oninput="onYRangeInput()">
+          <input type="number" id="yrangeMax" step="0.5" oninput="onYRangeInput('comp')">
           <button class="yrange-default-btn" onclick="resetYRangeAxis()">デフォルトに戻す</button>
         </div>
       </div>
@@ -288,7 +300,7 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
-<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.2</div>
+<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.3</div>
 
 <script>
 /* ===== Constants ===== */
@@ -299,12 +311,12 @@ const TAKE_COLORS = ['#3AABA8','#E88A0A','#2E8EC4','#C94040','#7B5EA7'];
 const MAX_LIVE = 200;
 const MAX_COMP_PTS = 1000;
 const LS_KEY = 'wave-lab-projects';
-const LS_YRANGE = 'wave-lab-y-range';
+const LS_YRANGE = 'wave-lab-y-range-v2';
 const Y_RANGE_DEFAULTS = {
-  abs:  {min: 0,   max: 8},
-  ax:   {min: -4,  max: 4},
-  ay:   {min: -4,  max: 4},
-  az:   {min: -4,  max: 4},
+  abs:  {min: 0,   max: 5},
+  ax:   {min: -5,  max: 5},
+  ay:   {min: -5,  max: 5},
+  az:   {min: -5,  max: 5},
   gyro: {min: 0,   max: 2000}
 };
 
@@ -332,31 +344,66 @@ function loadYRange(){
 function saveYRange(){ try{localStorage.setItem(LS_YRANGE,JSON.stringify(yRange))}catch(e){} }
 let yRange = loadYRange();
 function getYR(axis){ return yRange[axis] || Y_RANGE_DEFAULTS[axis] || {min:-4,max:4}; }
+function getStep(axis){ return axis==='gyro'?100:0.5; }
 function syncYRangeUI(){
-  const axis = compAxis;
-  const r = getYR(axis);
+  // Compare UI
+  const r = getYR(compAxis);
+  const s = getStep(compAxis);
   document.getElementById('yrangeMin').value = r.min;
   document.getElementById('yrangeMax').value = r.max;
+  document.getElementById('yrangeMin').step = s;
+  document.getElementById('yrangeMax').step = s;
 }
-function onYRangeInput(){
-  const mn = parseFloat(document.getElementById('yrangeMin').value);
-  const mx = parseFloat(document.getElementById('yrangeMax').value);
+function syncYRangeMeasUI(){
+  const r = getYR(liveAxis);
+  const s = getStep(liveAxis);
+  document.getElementById('yrangeMeasMin').value = r.min;
+  document.getElementById('yrangeMeasMax').value = r.max;
+  document.getElementById('yrangeMeasMin').step = s;
+  document.getElementById('yrangeMeasMax').step = s;
+}
+function onYRangeInput(src){
+  let axis, mnEl, mxEl;
+  if(src==='meas'){ axis=liveAxis; mnEl='yrangeMeasMin'; mxEl='yrangeMeasMax'; }
+  else { axis=compAxis; mnEl='yrangeMin'; mxEl='yrangeMax'; }
+  const mn = parseFloat(document.getElementById(mnEl).value);
+  const mx = parseFloat(document.getElementById(mxEl).value);
   if(isNaN(mn)||isNaN(mx)||mn>=mx) return;
-  yRange[compAxis] = {min:mn, max:mx};
+  yRange[axis] = {min:mn, max:mx};
   saveYRange();
-  renderCompare();
+  // Sync the other screen's UI if same axis
+  if(src==='meas'){ if(axis===compAxis) syncYRangeUI(); applyYRangeToLive(); }
+  else { if(axis===liveAxis) syncYRangeMeasUI(); renderCompare(); }
+}
+function applyYRangeToLive(){
+  if(!liveChart) return;
+  const yr=getYR(liveAxis);
+  liveChart.options.scales.y.min=yr.min;
+  liveChart.options.scales.y.max=yr.max;
+  liveChart.update('none');
 }
 function resetYRangeAxis(){
   yRange[compAxis] = {...Y_RANGE_DEFAULTS[compAxis]};
-  saveYRange();
-  syncYRangeUI();
+  saveYRange(); syncYRangeUI();
+  if(compAxis===liveAxis) syncYRangeMeasUI();
   renderCompare();
+}
+function resetYRangeAxisMeas(){
+  yRange[liveAxis] = {...Y_RANGE_DEFAULTS[liveAxis]};
+  saveYRange(); syncYRangeMeasUI(); applyYRangeToLive();
+  if(liveAxis===compAxis) syncYRangeUI();
 }
 function toggleYRange(){
   const body=document.getElementById('yrangeBody');const open=body.style.display!=='none';
   body.style.display=open?'none':'block';
   document.getElementById('yrangeToggle').classList.toggle('open',!open);
   if(!open) syncYRangeUI();
+}
+function toggleYRangeMeas(){
+  const body=document.getElementById('yrangeMeasBody');const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  document.getElementById('yrangeMeasToggle').classList.toggle('open',!open);
+  if(!open) syncYRangeMeasUI();
 }
 
 /* ===== Persistence ===== */
@@ -563,6 +610,7 @@ document.getElementById('liveAxisBtns').addEventListener('click',e=>{
   e.target.classList.add('active');
   liveAxis=e.target.dataset.ax;
   if(liveChart){const yr=getYR(liveAxis);liveChart.options.scales.y.min=yr.min;liveChart.options.scales.y.max=yr.max;liveChart.update('none')}
+  if(document.getElementById('yrangeMeasBody').style.display!=='none') syncYRangeMeasUI();
 });
 
 /* ===== Recording ===== */
