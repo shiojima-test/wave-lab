@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WAVE LAB v1.8</title>
+<title>WAVE LAB v2.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -103,16 +103,18 @@ a{color:var(--teal);text-decoration:none}
 .stats-table th{background:var(--bg);font-weight:700;font-size:11px;color:var(--text2)}
 .stats-table td{font-variant-numeric:tabular-nums}
 
-/* Range slider */
-.range-bar{position:relative;margin:10px 0 16px;user-select:none;touch-action:none}
-.range-track{height:6px;background:var(--border);border-radius:3px;position:relative}
-.range-fill{position:absolute;top:0;height:100%;background:var(--teal);border-radius:3px;opacity:.3}
-.range-handle{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;background:var(--teal);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transform:translate(-50%,-50%);cursor:grab;z-index:2}
-.range-handle:active{cursor:grabbing;transform:translate(-50%,-50%) scale(1.15)}
-.range-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-top:4px}
-.range-reset-row{text-align:center;margin-bottom:10px}
-.range-reset{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--text2)}
-.range-reset:hover{border-color:var(--teal);color:var(--teal)}
+/* Mini wave preview (compare screen) */
+.mini-wave-row{margin-bottom:12px;padding:10px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)}
+.mini-wave-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.mini-wave-header .legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mini-wave-header .mw-name{font-size:13px;font-weight:700;flex:1}
+.mini-wave-header .mw-range{font-size:11px;color:var(--text2);font-variant-numeric:tabular-nums}
+.mini-wave-reset{background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--teal)}
+.mini-wave-reset:hover{background:var(--teal);color:#fff}
+.mini-wave-outer{position:relative;cursor:crosshair;user-select:none;-webkit-user-select:none;padding:4px 0}
+.mini-wave-outer canvas{width:100%!important;height:60px!important}
+.mini-wave-overlay{position:absolute;top:4px;bottom:4px;background:rgba(232,138,10,.15);border-left:2px solid var(--orange);border-right:2px solid var(--orange);pointer-events:none;display:none}
+.comp-reset-all{text-align:center;margin:10px 0}
 
 /* Project cards */
 .proj-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px}
@@ -168,6 +170,7 @@ a{color:var(--teal);text-decoration:none}
   .lv .val{font-size:14px}
   .lv .label{font-size:9px}
   .review-outer canvas{height:200px!important}
+  .mini-wave-outer canvas{height:50px!important}
 }
 </style>
 </head>
@@ -177,7 +180,7 @@ a{color:var(--teal);text-decoration:none}
   <div class="logo">WL</div>
   <div class="header-title">
     <h1>WAVE LAB</h1>
-    <div class="sub">SENSOR COMPARE LAB v1.8</div>
+    <div class="sub">SENSOR COMPARE LAB v2.0</div>
   </div>
   <div class="ble-area">
     <button class="ble-btn" id="bleBtn" onclick="toggleBLE()">BLE接続</button>
@@ -308,18 +311,13 @@ a{color:var(--teal);text-decoration:none}
       <button class="axis-btn" data-ax="ay">AY</button>
       <button class="axis-btn" data-ax="az">AZ</button>
     </div>
+
+    <!-- Per-take trim (overlay mode) -->
+    <div id="compTrimSection"></div>
+
     <div class="legend" id="compLegend"></div>
     <div id="compCharts"></div>
-    <!-- Range slider -->
-    <div class="range-reset-row"><button class="range-reset" onclick="resetRange()">全範囲リセット</button></div>
-    <div class="range-bar" id="rangeBar">
-      <div class="range-track">
-        <div class="range-fill" id="rangeFill"></div>
-        <div class="range-handle" id="handleL" style="left:0%"></div>
-        <div class="range-handle" id="handleR" style="left:100%"></div>
-      </div>
-      <div class="range-labels"><span id="rangeLabelL">0%</span><span id="rangeLabelR">100%</span></div>
-    </div>
+
     <div class="yrange-section">
       <div class="yrange-toggle" id="yrangeToggle" onclick="toggleYRange()">Y軸レンジ設定（グラフの縦軸範囲）</div>
       <div class="yrange-body" id="yrangeBody">
@@ -341,7 +339,7 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
-<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.8</div>
+<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v2.0</div>
 
 <script>
 /* ===== Constants ===== */
@@ -380,7 +378,6 @@ let compMode = 'overlay';
 let compAxis = 'abs';
 let recStart = 0, timerInterval = null;
 let partialLine = '';
-let rangeL = 0, rangeR = 100; // % range for compare
 let detectedPeaks = [];
 let trimStart = 0, trimEnd = 1;
 let revChart = null;
@@ -470,6 +467,8 @@ function loadProjects(){
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (raw) projects = JSON.parse(raw);
+    // Migrate: add compRange to old takes
+    projects.forEach(p => { if(p.takes) p.takes.forEach(t => { if(!t.compRange) t.compRange={start:0,end:1}; }); });
   } catch(e) { projects = []; }
 }
 
@@ -725,6 +724,7 @@ function saveTake(){
     memo:currentTake.memo, color:currentTake.color,
     fullLog:[...fullLog],
     trimRange:{start:trimStart, end:trimEnd},
+    compRange:{start:0, end:1},
     peaks:detectedPeaks,
     metrics
   };
@@ -930,7 +930,9 @@ function renderTakesList(){
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 /* ===== Compare ===== */
-let compCharts=[];
+let compCharts = [];
+let miniCharts = [];
+
 function setCompMode(m){
   compMode=m;
   document.getElementById('modeOverlay').classList.toggle('active',m==='overlay');
@@ -960,283 +962,291 @@ function downsample(arr,max){
   return out;
 }
 
-function sliceByRange(arr){
-  const n=arr.length;
-  const iS=Math.floor(rangeL/100*n);
-  const iE=Math.min(n,Math.ceil(rangeR/100*n));
-  return arr.slice(iS,iE);
+function sliceByRatio(arr, range) {
+  if (!range || !arr.length) return arr;
+  const n = arr.length;
+  const lo = Math.floor((range.start || 0) * n);
+  const hi = Math.min(n, Math.ceil((range.end || 1) * n));
+  return arr.slice(lo, hi);
 }
 
-function renderCompare(){
-  if(!currentProject) return;
-  const takes = currentProject.takes;
-  compCharts.forEach(c=>c.destroy());compCharts=[];
-  const container=document.getElementById('compCharts');container.innerHTML='';
+function getComparableLog(take) {
+  const trimmed = getTrimmedLog(take);
+  return sliceByRatio(trimmed, take.compRange || {start:0, end:1});
+}
 
-  const leg=document.getElementById('compLegend');
-  if(compMode==='overlay'){
-    leg.style.display='';
-    leg.innerHTML=takes.map(t=>`<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div>${esc(t.name)}</div>`).join('');
+function resetAllCompRanges() {
+  if (!currentProject) return;
+  currentProject.takes.forEach(t => t.compRange = {start:0, end:1});
+  saveProjects();
+  renderCompare();
+}
+
+function resetOneCompRange(idx) {
+  if (!currentProject || !currentProject.takes[idx]) return;
+  currentProject.takes[idx].compRange = {start:0, end:1};
+  saveProjects();
+  renderCompare();
+}
+
+function renderCompare() {
+  if (!currentProject) return;
+  const takes = currentProject.takes;
+  compCharts.forEach(c => c.destroy()); compCharts = [];
+  miniCharts.forEach(c => c.destroy()); miniCharts = [];
+  const container = document.getElementById('compCharts');
+  container.innerHTML = '';
+  const trimSection = document.getElementById('compTrimSection');
+
+  // Legend: overlay only
+  const leg = document.getElementById('compLegend');
+  if (compMode === 'overlay') {
+    leg.style.display = '';
+    leg.innerHTML = takes.map(t => `<div class="legend-item"><div class="legend-dot" style="background:${t.color}"></div>${esc(t.name)}</div>`).join('');
   } else {
-    leg.style.display='none';
+    leg.style.display = 'none';
   }
 
-  if(compMode==='overlay'){
-    const canvas=document.createElement('canvas');
-    canvas.className='comp-overlay-canvas';
-    const dragWrap=document.createElement('div');dragWrap.className='comp-drag-wrap';dragWrap.id='compDragWrap';
-    const selOvComp=document.createElement('div');selOvComp.className='comp-sel-overlay';selOvComp.id='compSelOv';
-    const wrap=document.createElement('div');wrap.className='chart-wrap';
-    dragWrap.appendChild(canvas);dragWrap.appendChild(selOvComp);
-    wrap.appendChild(dragWrap);
-    const hint=document.createElement('div');hint.className='comp-drag-hint';hint.textContent='← 波形をドラッグで範囲選択 →';
-    wrap.appendChild(hint);
-    container.appendChild(wrap);
+  if (compMode === 'overlay') {
+    // Build mini wave trim UI
+    let trimHTML = '<div class="card"><h2>テイク別切り抜き設定</h2>';
+    takes.forEach((t, i) => {
+      const cr = t.compRange || {start:0,end:1};
+      const rangeStr = Math.round(cr.start*100) + '%〜' + Math.round(cr.end*100) + '%';
+      const locStr = t.location ? (' / ' + esc(t.location)) : '';
+      trimHTML += `<div class="mini-wave-row" style="border-color:${t.color}">
+        <div class="mini-wave-header">
+          <div class="legend-dot" style="background:${t.color}"></div>
+          <span class="mw-name">${esc(t.name)}${locStr}</span>
+          <span class="mw-range" id="mwRange${i}">${rangeStr}</span>
+          <button class="mini-wave-reset" onclick="resetOneCompRange(${i})">リセット</button>
+        </div>
+        <div class="mini-wave-outer" id="mwOuter${i}">
+          <canvas id="mwCanvas${i}"></canvas>
+          <div class="mini-wave-overlay" id="mwOv${i}"></div>
+        </div>
+      </div>`;
+    });
+    trimHTML += '<div class="comp-reset-all"><button class="btn-sm btn-outline" onclick="resetAllCompRanges()">全テイクをリセット</button></div></div>';
+    trimSection.innerHTML = trimHTML;
 
-    const datasets=takes.map(t=>{
-      const tr = t.trimRange || {start:0, end:1};
+    // Draw mini charts and setup drag
+    takes.forEach((t, i) => {
       const trimmed = getTrimmedLog(t);
-      const sliced=sliceByRange(trimmed);
-      const ds=downsample(sliced,MAX_COMP_PTS);
-      // Peak markers
-      const radii=ds.map(()=>0);
-      if(t.peaks && compAxis==='abs'){
-        const trimS=Math.floor(tr.start*t.fullLog.length);
-        const trimE=Math.min(t.fullLog.length, Math.ceil(tr.end*t.fullLog.length));
-        const rangeS=Math.floor(rangeL/100*trimmed.length);
-        const rangeE=Math.min(trimmed.length, Math.ceil(rangeR/100*trimmed.length));
-        const sliceLen=rangeE-rangeS;
-        const dsStep=sliceLen/(ds.length||1);
-        t.peaks.forEach(p=>{
-          const adjIdx=p.index-trimS-rangeS;
-          if(adjIdx>=0&&adjIdx<sliceLen){
-            const ci=Math.floor(adjIdx/dsStep);
-            if(ci>=0&&ci<radii.length) radii[ci]=4;
+      const ds = downsample(trimmed, 500);
+      const ctx = document.getElementById('mwCanvas' + i).getContext('2d');
+      const yr = getYR(compAxis);
+      const mc = new Chart(ctx, {
+        type: 'line',
+        data: { labels: ds.map((_, j) => j), datasets: [{ data: ds.map(s => getAxisVal(s, compAxis)), borderColor: t.color, borderWidth: 1, pointRadius: 0, tension: .2, fill: false }] },
+        options: { animation: false, responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { min: yr.min, max: yr.max, display: false } }, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+      });
+      miniCharts.push(mc);
+
+      // Show current compRange overlay
+      const cr = t.compRange || {start:0,end:1};
+      if (cr.start > 0 || cr.end < 1) {
+        const ov = document.getElementById('mwOv' + i);
+        ov.style.display = 'block';
+        ov.style.left = (cr.start * 100) + '%';
+        ov.style.width = ((cr.end - cr.start) * 100) + '%';
+      }
+
+      // Setup drag for this mini wave
+      setupTakeDrag(i, 'mwOuter' + i, 'mwOv' + i, 'mwRange' + i);
+    });
+
+    // Main overlay chart
+    const canvas = document.createElement('canvas');
+    canvas.className = 'comp-overlay-canvas';
+    const wrap = document.createElement('div'); wrap.className = 'chart-wrap';
+    wrap.appendChild(canvas); container.appendChild(wrap);
+
+    const datasets = takes.map(t => {
+      const ds = downsample(getComparableLog(t), MAX_COMP_PTS);
+      const radii = ds.map(() => 0);
+      if (t.peaks && compAxis === 'abs') {
+        const trimmed = getTrimmedLog(t);
+        const cr = t.compRange || {start:0,end:1};
+        const compStart = Math.floor(cr.start * trimmed.length);
+        const compEnd = Math.ceil(cr.end * trimmed.length);
+        const compLen = compEnd - compStart;
+        const trimS = Math.floor((t.trimRange?.start || 0) * t.fullLog.length);
+        const dsStep = compLen / (ds.length || 1);
+        t.peaks.forEach(p => {
+          const idxInTrimmed = p.index - trimS;
+          const idxInComp = idxInTrimmed - compStart;
+          if (idxInComp >= 0 && idxInComp < compLen) {
+            const ci = Math.floor(idxInComp / dsStep);
+            if (ci >= 0 && ci < radii.length) radii[ci] = 4;
           }
         });
       }
-      return{label:t.name,data:ds.map((s,i)=>({x:(i/(ds.length-1||1))*100,y:getAxisVal(s,compAxis)})),
-        borderColor:t.color,borderWidth:1.5,pointRadius:radii,
-        pointBackgroundColor:'#E88A0A',pointBorderColor:'#E88A0A',
-        tension:.2,fill:false};
+      return {
+        label: t.name,
+        data: ds.map((s, j) => ({ x: (j / (ds.length - 1 || 1)) * 100, y: getAxisVal(s, compAxis) })),
+        borderColor: t.color, borderWidth: 1.5, pointRadius: radii,
+        pointBackgroundColor: '#E88A0A', pointBorderColor: '#E88A0A',
+        tension: .2, fill: false
+      };
     });
-    const yr=getYR(compAxis);
-    const ch=new Chart(canvas.getContext('2d'),{type:'line',data:{datasets},
-      options:{animation:false,responsive:true,maintainAspectRatio:false,
-        scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:11}},ticks:{font:{size:10}}},y:{min:yr.min,max:yr.max,ticks:{font:{size:10}}}},
-        plugins:{legend:{display:false}}}
+    const yr = getYR(compAxis);
+    const ch = new Chart(canvas.getContext('2d'), {
+      type: 'line', data: { datasets },
+      options: {
+        animation: false, responsive: true, maintainAspectRatio: false,
+        scales: { x: { type: 'linear', title: { display: true, text: '進捗 %', font: { size: 11 } }, ticks: { font: { size: 10 } } }, y: { min: yr.min, max: yr.max, ticks: { font: { size: 10 } } } },
+        plugins: { legend: { display: false } }
+      }
     });
     compCharts.push(ch);
-    setupCompDrag();
-  } else {
-    const stackDragWraps=[];
-    for(const t of takes){
-      const wrap=document.createElement('div');wrap.className='compare-chart-wrap';
-      const label=document.createElement('div');label.className='chart-label';
-      const locStr=t.location?(' / '+esc(t.location)):'';
-      label.innerHTML=`<div class="legend-dot" style="background:${t.color}"></div> ${esc(t.name)}${locStr}`;
-      wrap.appendChild(label);
-      const cwrap=document.createElement('div');cwrap.className='chart-wrap';
-      const dragWrap=document.createElement('div');dragWrap.className='comp-drag-wrap';
-      const selOvStack=document.createElement('div');selOvStack.className='comp-sel-overlay';
-      const canvas=document.createElement('canvas');canvas.className='comp-stack-canvas';
-      dragWrap.appendChild(canvas);dragWrap.appendChild(selOvStack);
-      cwrap.appendChild(dragWrap);wrap.appendChild(cwrap);container.appendChild(wrap);
-      stackDragWraps.push({dragWrap,selOv:selOvStack});
 
-      const tr = t.trimRange || {start:0, end:1};
+  } else {
+    // Stack mode
+    trimSection.innerHTML = '';
+    for (let i = 0; i < takes.length; i++) {
+      const t = takes[i];
+      const wrap = document.createElement('div'); wrap.className = 'compare-chart-wrap';
+      const cr = t.compRange || {start:0,end:1};
+      const rangeStr = Math.round(cr.start*100) + '%〜' + Math.round(cr.end*100) + '%';
+      const locStr = t.location ? (' / ' + esc(t.location)) : '';
+      const label = document.createElement('div'); label.className = 'chart-label';
+      label.innerHTML = `<div class="legend-dot" style="background:${t.color}"></div> ${esc(t.name)}${locStr} <span style="color:var(--text2);font-weight:400;font-size:11px;margin-left:auto" id="stackRange${i}">${rangeStr}</span> <button class="mini-wave-reset" onclick="resetOneCompRange(${i})">リセット</button>`;
+      wrap.appendChild(label);
+
+      const cwrap = document.createElement('div'); cwrap.className = 'chart-wrap';
+      const dragWrap = document.createElement('div'); dragWrap.className = 'comp-drag-wrap'; dragWrap.id = 'stackOuter' + i;
+      const selOv = document.createElement('div'); selOv.className = 'comp-sel-overlay'; selOv.id = 'stackOv' + i;
+      const canvas = document.createElement('canvas'); canvas.className = 'comp-stack-canvas';
+      dragWrap.appendChild(canvas); dragWrap.appendChild(selOv);
+      cwrap.appendChild(dragWrap); wrap.appendChild(cwrap);
+      container.appendChild(wrap);
+
+      // Show existing compRange overlay
+      if (cr.start > 0 || cr.end < 1) {
+        selOv.style.display = 'block';
+        selOv.style.left = (cr.start * 100) + '%';
+        selOv.style.width = ((cr.end - cr.start) * 100) + '%';
+      }
+
+      // Draw the FULL trimmed log (not compRange-sliced) so user can see whole wave and drag to select
       const trimmed = getTrimmedLog(t);
-      const sliced=sliceByRange(trimmed);
-      const ds=downsample(sliced,MAX_COMP_PTS);
-      const radii=ds.map(()=>0);
-      if(t.peaks && compAxis==='abs'){
-        const trimS=Math.floor(tr.start*t.fullLog.length);
-        const rangeS=Math.floor(rangeL/100*trimmed.length);
-        const rangeE=Math.min(trimmed.length, Math.ceil(rangeR/100*trimmed.length));
-        const sliceLen=rangeE-rangeS;
-        const dsStep=sliceLen/(ds.length||1);
-        t.peaks.forEach(p=>{
-          const adjIdx=p.index-trimS-rangeS;
-          if(adjIdx>=0&&adjIdx<sliceLen){
-            const ci=Math.floor(adjIdx/dsStep);
-            if(ci>=0&&ci<radii.length) radii[ci]=4;
+      const ds = downsample(trimmed, MAX_COMP_PTS);
+      const radii = ds.map(() => 0);
+      if (t.peaks && compAxis === 'abs') {
+        const trimS = Math.floor((t.trimRange?.start || 0) * t.fullLog.length);
+        const dsStep = trimmed.length / (ds.length || 1);
+        t.peaks.forEach(p => {
+          const adj = p.index - trimS;
+          if (adj >= 0 && adj < trimmed.length) {
+            const ci = Math.floor(adj / dsStep);
+            if (ci >= 0 && ci < radii.length) radii[ci] = 4;
           }
         });
       }
-      const yr=getYR(compAxis);
-      const ch=new Chart(canvas.getContext('2d'),{type:'line',
-        data:{datasets:[{data:ds.map((s,i)=>({x:(i/(ds.length-1||1))*100,y:getAxisVal(s,compAxis)})),
-          borderColor:t.color,borderWidth:1.5,pointRadius:radii,pointBackgroundColor:'#E88A0A',pointBorderColor:'#E88A0A',tension:.2,fill:false}]},
-        options:{animation:false,responsive:true,maintainAspectRatio:false,
-          scales:{x:{type:'linear',title:{display:true,text:'進捗 %',font:{size:10}},ticks:{font:{size:9}}},y:{min:yr.min,max:yr.max,ticks:{font:{size:9}}}},
-          plugins:{legend:{display:false}}}
+      const yr = getYR(compAxis);
+      const ch = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: { datasets: [{ data: ds.map((s, j) => ({ x: (j / (ds.length - 1 || 1)) * 100, y: getAxisVal(s, compAxis) })), borderColor: t.color, borderWidth: 1.5, pointRadius: radii, pointBackgroundColor: '#E88A0A', pointBorderColor: '#E88A0A', tension: .2, fill: false }] },
+        options: {
+          animation: false, responsive: true, maintainAspectRatio: false,
+          scales: { x: { type: 'linear', title: { display: true, text: '進捗 %', font: { size: 10 } }, ticks: { font: { size: 9 } } }, y: { min: yr.min, max: yr.max, ticks: { font: { size: 9 } } } },
+          plugins: { legend: { display: false } }
+        }
       });
       compCharts.push(ch);
+
+      // Setup individual drag for this stack chart
+      setupTakeDrag(i, 'stackOuter' + i, 'stackOv' + i, 'stackRange' + i);
     }
-    setupCompDragStack(stackDragWraps);
+
+    // Reset all button for stack
+    const resetDiv = document.createElement('div'); resetDiv.className = 'comp-reset-all';
+    resetDiv.innerHTML = '<button class="btn-sm btn-outline" onclick="resetAllCompRanges()">全テイクをリセット</button>';
+    container.appendChild(resetDiv);
   }
+
   renderStats();
 }
 
-function renderStats(){
-  if(!currentProject) return;
-  const takes = currentProject.takes;
-  const body=document.getElementById('statsBody');
-  let html='<table class="stats-table"><thead><tr><th>テイク</th><th>最大衝撃(G)</th><th>平均衝撃(G)</th><th>ピーク数</th><th>最大角速度</th><th>時間(s)</th></tr></thead><tbody>';
-  for(const t of takes){
-    const m=t.metrics;
-    const pc = t.peaks ? t.peaks.filter(p => {
-      const tr = t.trimRange || {start:0, end:1};
-      const iS = Math.floor(tr.start * t.fullLog.length);
-      const iE = Math.ceil(tr.end * t.fullLog.length);
-      return p.index >= iS && p.index <= iE;
-    }).length : m.peakCount;
-    html+=`<tr><td style="color:${t.color};font-weight:700">${esc(t.name)}</td><td>${m.maxImpact.toFixed(2)}</td><td>${m.avgImpact.toFixed(2)}</td><td>${pc}</td><td>${m.maxGyro.toFixed(1)}</td><td>${m.duration.toFixed(1)}</td></tr>`;
+function setupTakeDrag(takeIdx, outerElId, ovElId, rangeLblId) {
+  const outer = document.getElementById(outerElId);
+  const ov = document.getElementById(ovElId);
+  if (!outer || !ov) return;
+  let active = false, x0 = 0, startPct = 0, endPct = 0;
+
+  function onStart(clientX) {
+    active = true;
+    const r = outer.getBoundingClientRect();
+    x0 = clientX - r.left;
+    startPct = x0 / r.width;
+    endPct = startPct;
+    ov.style.display = 'block';
+    ov.style.left = (startPct * 100) + '%';
+    ov.style.width = '0';
   }
-  html+='</tbody></table>';body.innerHTML=html;
+  function onMove(clientX) {
+    if (!active) return;
+    const r = outer.getBoundingClientRect();
+    const x = Math.max(0, Math.min(r.width, clientX - r.left));
+    endPct = x / r.width;
+    const lo = Math.min(startPct, endPct), hi = Math.max(startPct, endPct);
+    ov.style.left = (lo * 100) + '%';
+    ov.style.width = ((hi - lo) * 100) + '%';
+  }
+  function onEnd() {
+    if (!active) return;
+    active = false;
+    if (Math.abs(endPct - startPct) < 0.01) {
+      ov.style.display = 'none';
+      return;
+    }
+    const lo = Math.min(startPct, endPct);
+    const hi = Math.max(startPct, endPct);
+    if (currentProject && currentProject.takes[takeIdx]) {
+      currentProject.takes[takeIdx].compRange = { start: lo, end: hi };
+      saveProjects();
+      renderCompare();
+    }
+  }
+
+  outer.addEventListener('mousedown', e => { onStart(e.clientX); e.preventDefault() });
+  outer.addEventListener('mousemove', e => onMove(e.clientX));
+  outer.addEventListener('mouseup', onEnd);
+  outer.addEventListener('mouseleave', () => { /* let document handle */ });
+  outer.addEventListener('touchstart', e => { onStart(e.touches[0].clientX); e.preventDefault() }, { passive: false });
+  outer.addEventListener('touchmove', e => { onMove(e.touches[0].clientX); e.preventDefault() }, { passive: false });
+  outer.addEventListener('touchend', onEnd);
+  document.addEventListener('mouseup', () => { if (active) onEnd() });
 }
+
+function renderStats() {
+  if (!currentProject) return;
+  const takes = currentProject.takes;
+  const body = document.getElementById('statsBody');
+  let html = '<table class="stats-table"><thead><tr><th>テイク</th><th>最大衝撃(G)</th><th>平均衝撃(G)</th><th>ピーク数</th><th>最大角速度</th><th>時間(s)</th></tr></thead><tbody>';
+  for (const t of takes) {
+    const log = getComparableLog(t);
+    const m = calcMetrics(log);
+    // Count peaks in compRange
+    const trimmed = getTrimmedLog(t);
+    const cr = t.compRange || {start:0,end:1};
+    const compS = Math.floor(cr.start * trimmed.length);
+    const compE = Math.ceil(cr.end * trimmed.length);
+    const trimS = Math.floor((t.trimRange?.start || 0) * t.fullLog.length);
+    const pc = t.peaks ? t.peaks.filter(p => {
+      const adj = p.index - trimS;
+      return adj >= compS && adj < compE;
+    }).length : m.peakCount;
+    html += `<tr><td style="color:${t.color};font-weight:700">${esc(t.name)}</td><td>${m.maxImpact.toFixed(2)}</td><td>${m.avgImpact.toFixed(2)}</td><td>${pc}</td><td>${m.maxGyro.toFixed(1)}</td><td>${m.duration.toFixed(1)}</td></tr>`;
+  }
+  html += '</tbody></table>'; body.innerHTML = html;
+}
+
 function toggleStats(){
   const body=document.getElementById('statsBody');const open=body.style.display!=='none';
   body.style.display=open?'none':'block';
   document.getElementById('statsToggle').classList.toggle('open',!open);
-}
-
-/* ===== Range slider ===== */
-function resetRange(){rangeL=0;rangeR=100;updateRangeUI();renderCompare()}
-function updateRangeUI(){
-  document.getElementById('handleL').style.left=rangeL+'%';
-  document.getElementById('handleR').style.left=rangeR+'%';
-  document.getElementById('rangeFill').style.left=rangeL+'%';
-  document.getElementById('rangeFill').style.width=(rangeR-rangeL)+'%';
-  document.getElementById('rangeLabelL').textContent=Math.round(rangeL)+'%';
-  document.getElementById('rangeLabelR').textContent=Math.round(rangeR)+'%';
-}
-(function initRangeSlider(){
-  const bar=document.getElementById('rangeBar');
-  const track=bar.querySelector('.range-track');
-  let dragging=null;
-  function pct(e){
-    const rect=track.getBoundingClientRect();
-    const x=(e.clientX||e.touches?.[0]?.clientX||0)-rect.left;
-    return Math.max(0,Math.min(100,x/rect.width*100));
-  }
-  function onDown(e){
-    const id=e.target.id;
-    if(id==='handleL')dragging='L';
-    else if(id==='handleR')dragging='R';
-    else return;
-    e.preventDefault();
-  }
-  function onMove(e){
-    if(!dragging)return;
-    const p=pct(e);
-    if(dragging==='L'){rangeL=Math.min(p,rangeR-1);}
-    else{rangeR=Math.max(p,rangeL+1);}
-    updateRangeUI();
-  }
-  function onUp(){
-    if(!dragging)return;
-    dragging=null;
-    renderCompare();
-  }
-  bar.addEventListener('pointerdown',onDown);
-  document.addEventListener('pointermove',onMove);
-  document.addEventListener('pointerup',onUp);
-  updateRangeUI();
-})();
-
-/* ===== Compare drag selection (shared logic) ===== */
-let compDragActive=false, compDragX0=0, compDragStartPct=0, compDragEndPct=0;
-
-function setupCompDrag(){
-  const wrap=document.getElementById('compDragWrap');
-  const ov=document.getElementById('compSelOv');
-  if(!wrap||!ov) return;
-
-  function onStart(clientX){
-    compDragActive=true;
-    const r=wrap.getBoundingClientRect();
-    compDragX0=clientX-r.left;
-    compDragStartPct=compDragX0/r.width;
-    compDragEndPct=compDragStartPct;
-    ov.style.display='block';
-    ov.style.left=compDragX0+'px';
-    ov.style.width='0';
-  }
-  function onMove(clientX){
-    if(!compDragActive) return;
-    const r=wrap.getBoundingClientRect();
-    const x=Math.max(0,Math.min(r.width,clientX-r.left));
-    compDragEndPct=x/r.width;
-    const l=Math.min(compDragX0,x),w=Math.abs(x-compDragX0);
-    ov.style.left=l+'px';ov.style.width=w+'px';
-  }
-  function onEnd(){
-    if(!compDragActive)return;
-    compDragActive=false;
-    if(Math.abs(compDragEndPct-compDragStartPct)<0.01){
-      ov.style.display='none';
-      return;
-    }
-    const lo=Math.min(compDragStartPct,compDragEndPct);
-    const hi=Math.max(compDragStartPct,compDragEndPct);
-    rangeL=Math.round(lo*100);
-    rangeR=Math.round(hi*100);
-    updateRangeUI();
-    renderCompare();
-  }
-
-  wrap.addEventListener('mousedown',e=>{onStart(e.clientX);e.preventDefault()});
-  wrap.addEventListener('mousemove',e=>onMove(e.clientX));
-  wrap.addEventListener('mouseup',onEnd);
-  wrap.addEventListener('mouseleave',onEnd);
-  wrap.addEventListener('touchstart',e=>{onStart(e.touches[0].clientX);e.preventDefault()},{passive:false});
-  wrap.addEventListener('touchmove',e=>{onMove(e.touches[0].clientX);e.preventDefault()},{passive:false});
-  wrap.addEventListener('touchend',onEnd);
-}
-
-function setupCompDragStack(wraps){
-  if(!wraps||!wraps.length) return;
-  let active=false, x0=0, startPct=0, endPct=0, activeWrap=null;
-
-  function onStart(clientX, dw){
-    active=true; activeWrap=dw;
-    const r=dw.dragWrap.getBoundingClientRect();
-    x0=clientX-r.left; startPct=x0/r.width; endPct=startPct;
-    wraps.forEach(w=>{w.selOv.style.display='block';w.selOv.style.left=((startPct)*100)+'%';w.selOv.style.width='0'});
-  }
-  function onMove(clientX){
-    if(!active||!activeWrap) return;
-    const r=activeWrap.dragWrap.getBoundingClientRect();
-    const x=Math.max(0,Math.min(r.width,clientX-r.left));
-    endPct=x/r.width;
-    const lPct=Math.min(startPct,endPct)*100, wPct=Math.abs(endPct-startPct)*100;
-    wraps.forEach(w=>{w.selOv.style.left=lPct+'%';w.selOv.style.width=wPct+'%'});
-  }
-  function onEnd(){
-    if(!active) return;
-    active=false; activeWrap=null;
-    if(Math.abs(endPct-startPct)<0.01){
-      wraps.forEach(w=>w.selOv.style.display='none');
-      return;
-    }
-    rangeL=Math.round(Math.min(startPct,endPct)*100);
-    rangeR=Math.round(Math.max(startPct,endPct)*100);
-    updateRangeUI();
-    renderCompare();
-  }
-
-  wraps.forEach(w=>{
-    w.dragWrap.addEventListener('mousedown',e=>{onStart(e.clientX,w);e.preventDefault()});
-    w.dragWrap.addEventListener('mousemove',e=>onMove(e.clientX));
-    w.dragWrap.addEventListener('mouseup',onEnd);
-    w.dragWrap.addEventListener('mouseleave',()=>{if(active&&activeWrap===w){}/* let onEnd handle via document */});
-    w.dragWrap.addEventListener('touchstart',e=>{onStart(e.touches[0].clientX,w);e.preventDefault()},{passive:false});
-    w.dragWrap.addEventListener('touchmove',e=>{onMove(e.touches[0].clientX);e.preventDefault()},{passive:false});
-    w.dragWrap.addEventListener('touchend',onEnd);
-  });
-  // Global mouseup to handle drag ending outside element
-  document.addEventListener('mouseup',()=>{if(active)onEnd()});
 }
 
 /* ===== Init ===== */
