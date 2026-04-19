@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WAVE LAB v1.4</title>
+<title>WAVE LAB v1.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -172,7 +172,7 @@ a{color:var(--teal);text-decoration:none}
   <div class="logo">WL</div>
   <div class="header-title">
     <h1>WAVE LAB</h1>
-    <div class="sub">SENSOR COMPARE LAB v1.4</div>
+    <div class="sub">SENSOR COMPARE LAB v1.5</div>
   </div>
   <div class="ble-area">
     <button class="ble-btn" id="bleBtn" onclick="toggleBLE()">BLE接続</button>
@@ -335,7 +335,7 @@ a{color:var(--teal);text-decoration:none}
   </div>
 </div>
 
-<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.4</div>
+<div class="footer">&copy; SchooMy, Inc. &mdash; WAVE LAB v1.5</div>
 
 <script>
 /* ===== Constants ===== */
@@ -516,7 +516,7 @@ function onBLEData(e){
     liveBuffer.push(sample);
     if(liveBuffer.length>MAX_LIVE) liveBuffer.shift();
     if(recording) fullLog.push(sample);
-    updateLiveVals(sample);
+    if(!document.getElementById('reviewSection').classList.contains('active')) updateLiveVals(sample);
   }
 }
 
@@ -599,8 +599,13 @@ function startMeas(){
   bar.querySelector('.info').textContent=name;
   bar.querySelector('.loc').textContent=loc?('/ '+loc):'';
   initLiveChart(color);
+  // Ensure live UI visible, review hidden
   document.getElementById('reviewSection').classList.remove('active');
+  document.getElementById('liveAxisBtns').style.display='';
   document.getElementById('liveChart').parentElement.style.display='';
+  document.querySelector('.live-vals').style.display='';
+  document.getElementById('timerDisp').style.display='';
+  document.querySelector('.rec-btns').style.display='';
   goTo('v-meas');
   startLiveLoop();
 }
@@ -670,22 +675,28 @@ function startRec(){
 }
 function stopRec(){
   recording=false;
-  document.getElementById('btnRec').disabled=true;
-  document.getElementById('btnStop').disabled=true;
-  document.getElementById('btnSave').style.display='none';
+  // Stop live loop
+  if(liveLoopId){cancelAnimationFrame(liveLoopId);liveLoopId=null}
   clearInterval(timerInterval);
+  // Hide live UI elements
+  document.getElementById('liveAxisBtns').style.display='none';
+  document.getElementById('liveChart').parentElement.style.display='none';
+  document.querySelector('.live-vals').style.display='none';
+  document.getElementById('timerDisp').style.display='none';
+  document.querySelector('.rec-btns').style.display='none';
+  document.getElementById('btnSave').style.display='none';
+  // Y-range section in meas stays visible
   if(fullLog.length>0){
     detectedPeaks = detectPeaks(fullLog);
     trimStart = 0; trimEnd = 1;
     selStartPct = null; selEndPct = null;
+    // Setup drag FIRST (clones DOM), then draw chart on new canvas
+    setupRevDrag();
     document.getElementById('selOv').style.display='none';
     document.getElementById('selInfo').style.display='none';
     document.getElementById('dragHint').style.display='';
     buildRevChart();
-    setupRevDrag();
     document.getElementById('reviewSection').classList.add('active');
-    // Hide live chart
-    document.getElementById('liveChart').parentElement.style.display='none';
   }
 }
 function updateTimer(){
@@ -717,8 +728,14 @@ function saveTake(){
   document.getElementById('inLoc').value='';
   document.getElementById('inMemo').value='';
   // Reset review state
+  if(revChart){revChart.destroy();revChart=null}
   document.getElementById('reviewSection').classList.remove('active');
+  // Restore live UI for next time
+  document.getElementById('liveAxisBtns').style.display='';
   document.getElementById('liveChart').parentElement.style.display='';
+  document.querySelector('.live-vals').style.display='';
+  document.getElementById('timerDisp').style.display='';
+  document.querySelector('.rec-btns').style.display='';
   document.getElementById('btnRec').disabled=false;
   goTo('v-setup');
 }
@@ -773,11 +790,21 @@ function retryRec(){
   fullLog=[];
   detectedPeaks=[];
   trimStart=0; trimEnd=1;
+  if(revChart){revChart.destroy();revChart=null}
+  // Hide review UI
   document.getElementById('reviewSection').classList.remove('active');
+  // Restore live UI
+  document.getElementById('liveAxisBtns').style.display='';
   document.getElementById('liveChart').parentElement.style.display='';
+  document.querySelector('.live-vals').style.display='';
+  document.getElementById('timerDisp').style.display='';
+  document.getElementById('timerDisp').textContent='00:00.0';
+  document.querySelector('.rec-btns').style.display='';
   document.getElementById('btnRec').disabled=false;
   document.getElementById('btnStop').disabled=true;
   document.getElementById('btnSave').style.display='none';
+  // Restart live loop
+  startLiveLoop();
 }
 
 function buildRevChart(){
